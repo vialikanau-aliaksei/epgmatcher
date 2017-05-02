@@ -1,0 +1,1 @@
+java -jar EPGMatcher.jar -P:"http://10.4.253.47:81/garant.m3u" -E:"http://10.4.253.47:81/xmltv.xml.gz" -S:"garant.m3u"
