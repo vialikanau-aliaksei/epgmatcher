@@ -11,13 +11,14 @@ import java.util.*;
  * Created by Alex on 18.04.2017.
  */
 public class EPGFinder {
-    public static final double RATE_THRESHOLD = 0.5;
+    public static final double RATE_THRESHOLD = 0.45;
+    public static final String NON_WORD_CHAR = "[^А-ЯA-Z0-9]+";
     private static final double FACTOR_DELTA_LENGTH = 0.02;
     private final static double MISSED_WORDS_FACTOR = 0.04;
-
-    public static final String NON_WORD_CHAR = "[^А-ЯA-Z0-9]+";
     private static final int MAX_RESULTS = 10;
     private static final int MIN_WORD_LENGTH = 2;
+    private static final double REPLACE_BY_SYNONYM_FACTOR = 0.9;
+    private static final double WORD_ORDER_FACTOR = 0.2;
     private final Map<String, String> mapping;
     private final Map<String, String[]> epgWordsMap;
     private final Map<String, EPG> epgMap;
@@ -37,6 +38,33 @@ public class EPGFinder {
         this.epgWordsMap = epgWordsMap;
         this.mapping = mapping != null ? mapping : new HashMap<>();
         synonyms = new Synonyms();
+    }
+
+    /**
+     * Split given argument by words by Regex {@link EPGFinder#NON_WORD_CHAR}
+     *
+     * @param phrase phrase to split.
+     * @return splitted phrase
+     */
+    public static String[] getWords(String phrase) {
+        String[] split = phrase.split(NON_WORD_CHAR);
+        StringBuilder prev = new StringBuilder();
+        List<String> list = new ArrayList<>();
+        for (String str : split) {
+            if (str.length() < MIN_WORD_LENGTH) {
+                prev.append(str);
+            } else {
+                if (prev.length() > 0) {
+                    list.add(prev.toString());
+                }
+                prev.setLength(0);
+                prev.append(str);
+            }
+        }
+        if (prev.length() > 0) {
+            list.add(prev.toString());
+        }
+        return list.toArray(new String[]{});
     }
 
     /**
@@ -79,12 +107,6 @@ public class EPGFinder {
         String[] words = getWords(channelName);
         for (Map.Entry<String, String[]> entry : epgWordsMap.entrySet()) {
             EPG epg = epgMap.get(entry.getKey());
-
-            getRate(new String[]{"XXI", "ВЕК"}, new String[]{"TV", "XXI", "(TV21)"});
-            getRate(new String[]{"1Й", "ГОРОДСКОЙ"}, new String[]{"ПЕРВЫЙ", "ГОРОДСКОЙ"});
-            getRate(new String[]{"ОНТ"}, new String[]{"ОНТ", "(БЕЛАРУСЬ)"});
-            getRate(new String[]{"РОССИЯК"}, new String[]{"РОССИЯ", "КУЛЬТУРА"});
-            getRate(new String[]{"РОССИЯК"}, new String[]{"РОССИЯКУЛЬТУРА"});
 
             // search by joined words without delimeters
             String[] epgJoindeWords = new String[]{entry.getKey().replaceAll(NON_WORD_CHAR, "")};
@@ -129,7 +151,6 @@ public class EPGFinder {
         return results;
     }
 
-
     /**
      * Calculate rate by similarity of arguments.
      *
@@ -142,18 +163,26 @@ public class EPGFinder {
         double total = 0.0;
         List<String> chWordList = new ArrayList<>(Arrays.asList(channelKeyWords));
         List<String> epgWordList = new ArrayList<>(Arrays.asList(epgKeyWords));
-        double factorLength = channelKeyWords.length - 1;
+        double wordOrderFactor = channelKeyWords.length - 1;
         int index = 0;
         for (Iterator<String> itCH = chWordList.iterator(); itCH.hasNext(); ) {
-            String chWord = synonyms.getSynonym(itCH.next());
-            double factor = 1.0 + (factorLength > 0 ? ((factorLength - index) / factorLength) : 0) * 0.5;
+            String chNext = itCH.next();
+            String chWord = synonyms.getSynonym(chNext);
+            double factor = 1.0 + (wordOrderFactor > 0 ? ((wordOrderFactor - index) / wordOrderFactor) : 0) * WORD_ORDER_FACTOR;
+            if (!chWord.equals(chNext)) {
+                factor *= REPLACE_BY_SYNONYM_FACTOR;
+            }
             total += factor;
             for (Iterator<String> itEPG = epgWordList.iterator(); itEPG.hasNext(); ) {
-                String epgWord = synonyms.getSynonym(itEPG.next());
+                String epgNext = itEPG.next();
+                String epgWord = synonyms.getSynonym(epgNext);
                 int length = Math.min(chWord.length(), epgWord.length());
                 if (chWord.substring(0, length).equals(epgWord.substring(0, length))) {
                     double deltaLength = epgWord.length() - chWord.length();
                     matched += factor * (double) length / chWord.length() - (deltaLength * FACTOR_DELTA_LENGTH);
+                    if (!epgWord.equals(epgNext)) {
+                        matched *= REPLACE_BY_SYNONYM_FACTOR;
+                    }
                     //total += (double) chWord.length();
                     itCH.remove();
                     itEPG.remove();
@@ -163,32 +192,5 @@ public class EPGFinder {
             index++;
         }
         return matched / total - ((double) epgWordList.size() * MISSED_WORDS_FACTOR);
-    }
-
-    /**
-     * Split given argument by words by Regex {@link EPGFinder#NON_WORD_CHAR}
-     *
-     * @param phrase phrase to split.
-     * @return splitted phrase
-     */
-    public static String[] getWords(String phrase) {
-        String[] split = phrase.split(NON_WORD_CHAR);
-        StringBuilder prev = new StringBuilder();
-        List<String> list = new ArrayList<>();
-        for (String str : split) {
-            if (str.length() < MIN_WORD_LENGTH) {
-                prev.append(str);
-            } else {
-                if (prev.length() > 0) {
-                    list.add(prev.toString());
-                }
-                prev.setLength(0);
-                prev.append(str);
-            }
-        }
-        if (prev.length() > 0) {
-            list.add(prev.toString());
-        }
-        return list.toArray(new String[]{});
     }
 }

@@ -31,7 +31,7 @@ public class LoadController {
     }
 
     public LoadController(Stage parent) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("load.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("resources/load.fxml"));
         Parent root = fxmlLoader.load();
         controller = fxmlLoader.getController();
         stage = new Stage();

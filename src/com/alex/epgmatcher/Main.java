@@ -143,7 +143,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("main.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("resources/main.fxml"));
         Parent root = fxmlLoader.load();
         ViewController controller = fxmlLoader.getController();
         primaryStage.setTitle(TITLE);

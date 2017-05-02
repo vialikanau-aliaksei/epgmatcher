@@ -2,6 +2,7 @@
 jar/*
 out/*
 build/*
+*.xml
 *.iml
 .gradle/*
 gradle/*

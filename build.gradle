@@ -1,0 +1,34 @@
+apply plugin: "java"
+apply plugin: "application"
+
+mainClassName = "com.alex.epgmatcher.Main"
+def prodDir = "out"
+def srcDir = "src"
+def resDir = "src"
+
+compileJava.options.encoding = "UTF-8"
+
+sourceSets {
+    main {
+        java.srcDirs = [srcDir]
+        resources {
+			srcDirs = [resDir]
+			excludes = ["**/*.java", "**/*.xml"]
+		}
+    }
+}
+
+jar {
+    destinationDir = file(prodDir)
+    manifest.attributes("Main-Class": mainClassName)
+}
+
+jar.doLast {
+    delete {
+        delete "build"
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = "3.2.1"
+}
